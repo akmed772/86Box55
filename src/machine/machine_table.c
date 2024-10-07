@@ -1654,7 +1654,7 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#if defined(DEV_BRANCH) && defined(USE_LASERXT)
+#ifdef USE_LASERXT
     {
         .name = "[8088] VTech Laser Turbo XT",
         .internal_name = "ltxt",
@@ -1694,7 +1694,7 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#endif /* defined(DEV_BRANCH) && defined(USE_LASERXT) */
+#endif /* USE_LASERXT */
     /* Has a standard PS/2 KBC (so, use IBM PS/2 Type 1). */
     {
         .name = "[8088] Xi8088",
@@ -2519,7 +2519,7 @@ const machine_t machines[] = {
         .net_device = NULL
     },
 
-#if defined(DEV_BRANCH) && defined(USE_LASERXT)
+#ifdef USE_LASERXT
     {
         .name = "[8086] VTech Laser XT3",
         .internal_name = "lxt3",
@@ -2559,7 +2559,7 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#endif /* defined(DEV_BRANCH) && defined(USE_LASERXT) */
+#endif /* USE_LASERXT */
 
     /* 286 AT machines */
     /* Has IBM AT KBC firmware. */
@@ -3003,7 +3003,7 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#if defined(DEV_BRANCH) && defined(USE_OLIVETTI)
+#ifdef USE_OLIVETTI
     /* Has Olivetti KBC firmware. */
     {
         .name = "[ISA] Olivetti M290",
@@ -3044,8 +3044,8 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#endif /* defined(DEV_BRANCH) && defined(USE_OLIVETTI) */
-#if defined(DEV_BRANCH) && defined(USE_OPEN_AT)
+#endif /* USE_OLIVETTI */
+#ifdef USE_OPEN_AT
     /* Has IBM AT KBC firmware. */
     {
         .name = "[ISA] OpenAT",
@@ -3086,7 +3086,7 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#endif /* defined(DEV_BRANCH) && defined(USE_OPEN_AT) */
+#endif /* USE_OPEN_AT */
     /* Has IBM AT KBC firmware. */
     {
         .name = "[ISA] Phoenix IBM AT",
@@ -5524,10 +5524,10 @@ const machine_t machines[] = {
         .cpu = {
             .package = CPU_PKG_386DX | CPU_PKG_SOCKET1,
             .block = CPU_BLOCK_NONE,
-            .min_bus = 25000000,
-            .max_bus = 66666667,
-            .min_voltage = 5000,
-            .max_voltage = 5000,
+            .min_bus = 0,
+            .max_bus = 0,
+            .min_voltage = 0,
+            .max_voltage = 0,
             .min_multi = 0,
             .max_multi = 0
         },
@@ -5564,10 +5564,10 @@ const machine_t machines[] = {
         .cpu = {
             .package = CPU_PKG_386DX | CPU_PKG_SOCKET1,
             .block = CPU_BLOCK_NONE,
-            .min_bus = 25000000,
-            .max_bus = 66666667,
-            .min_voltage = 5000,
-            .max_voltage = 5000,
+            .min_bus = 0,
+            .max_bus = 0,
+            .min_voltage = 0,
+            .max_voltage = 0,
             .min_multi = 0,
             .max_multi = 0
         },
@@ -6516,7 +6516,7 @@ const machine_t machines[] = {
             .step = 1024
         },
         .nvrmask = 127,
-        .kbc_device = &keyboard_ps2_ami_device,
+        .kbc_device = &keyboard_at_ami_device,
         .kbc_p1 = 0xff,
         .gpio = 0xffffffff,
         .gpio_acpi = 0xffffffff,
@@ -12145,11 +12145,9 @@ const machine_t machines[] = {
         .ram = {
             .min = 8192,
             .max = 262144,
-            .max = 786432,
             .step = 8192
         },
         .nvrmask = 127,
-        .nvrmask = 255,
         .kbc_device = NULL,
         .kbc_p1 = 0xff,
         .gpio = 0xffffffff,
@@ -12324,7 +12322,7 @@ const machine_t machines[] = {
         .snd_device = &cs4236b_device,
         .net_device = &pcnet_am79c973_onboard_device
     },
-#if defined(DEV_BRANCH) && defined(USE_AN430TX)
+#ifdef USE_AN430TX
     /* This has the Phoenix MultiKey KBC firmware. */
     {
         .name = "[i430TX] Intel AN430TX",
@@ -12365,7 +12363,7 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-#endif /* defined(DEV_BRANCH) && defined(USE_AN430TX) */
+#endif /* USE_AN430TX */
     /* This has the AMIKey KBC firmware, which is an updated 'F' type. */
     {
         .name = "[i430TX] Intel YM430TX",
@@ -13800,7 +13798,7 @@ const machine_t machines[] = {
         .device = NULL,
         .fdc_device = NULL,
         .sio_device = NULL,
-        .vid_device = &s3_virge_375_onboard_pci_device,
+        .vid_device = &s3_virge_325_onboard_pci_device,
         .snd_device = &cs4236b_device,
         .net_device = NULL
     },
@@ -14720,7 +14718,7 @@ const machine_t machines[] = {
     /* Has a Winbond W83977EF Super I/O chip with on-chip KBC with AMIKey-2 KBC
        firmware. */
     {
-        .name = "[SMSC VictoryBX-66] A-Trend ATC-6310BXII",
+        .name = "[SMSC VictoryBX-66] A-Trend ATC6310BXII",
         .internal_name = "atc6310bxii",
         .type = MACHINE_TYPE_SLOT1,
         .chipset = MACHINE_CHIPSET_SMSC_VICTORYBX_66,
@@ -15439,7 +15437,7 @@ const machine_t machines[] = {
     /* Has a Winbond W83977EF Super I/O chip with on-chip KBC with AMIKey-2 KBC
        firmware. */
     {
-        .name = "[SMSC VictoryBX-66] A-Trend ATC-7020BXII",
+        .name = "[SMSC VictoryBX-66] A-Trend ATC7020BXII",
         .internal_name = "atc7020bxii",
         .type = MACHINE_TYPE_SOCKET370,
         .chipset = MACHINE_CHIPSET_SMSC_VICTORYBX_66,

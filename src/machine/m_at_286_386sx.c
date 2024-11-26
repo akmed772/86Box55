@@ -770,7 +770,8 @@ machine_at_sbc350a_init(const machine_t *model)
     machine_at_common_init(model);
 
     device_add(&ali1217_device);
-    device_add(&fdc37c665_ide_device);
+    device_add(&ide_isa_device);
+    device_add(&fdc37c665_ide_pri_device);
     device_add(&keyboard_ps2_ami_device);
 
     return ret;
@@ -965,7 +966,7 @@ machine_at_pc916sx_init(const machine_t *model)
     return ret;
 }
 
-#if defined(DEV_BRANCH) && defined(USE_OLIVETTI)
+#ifdef USE_OLIVETTI
 int
 machine_at_m290_init(const machine_t *model)
 {
@@ -988,4 +989,4 @@ machine_at_m290_init(const machine_t *model)
 
     return ret;
 }
-#endif
+#endif /* USE_OLIVETTI */

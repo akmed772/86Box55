@@ -78,7 +78,7 @@ int floppymodified[4];
 int floppyrate[4];
 
 int fdc_current[FDC_MAX] = { 0, 0 };
-
+#define ENABLE_FDC_LOG 1
 #ifdef ENABLE_FDC_LOG
 int fdc_do_log = ENABLE_FDC_LOG;
 
@@ -105,6 +105,7 @@ static fdc_cards_t fdc_cards[] = {
     // clang-format off
     { &device_none               },
     { &device_internal           },
+    { &fdc_ps2_ext_adapter_device }, /* Index must be identical to value defined in fdc_ext.h */
     { &fdc_b215_device           },
     { &fdc_pii151b_device        },
     { &fdc_pii158b_device        },
@@ -571,7 +572,10 @@ int
 real_drive(fdc_t *fdc, int drive)
 {
     if (drive < 2)
-        return drive ^ fdc->swap;
+        if (fdc->flags & FDC_FLAG_EXTDRIVE34)
+            return (drive + 2);
+        else
+            return drive ^ fdc->swap;
     else
         return drive;
 }
@@ -727,7 +731,8 @@ fdc_write(uint16_t addr, uint8_t val, void *priv)
                     if ((!fdd_get_flags(drive_num)) || (drive_num >= FDD_NUM))
                         val &= ~(0x10 << drive_num);
                     else
-                        fdd_set_motor_enable(i, (val & (0x10 << drive_num)));
+                        // fdd_set_motor_enable(i, (val & (0x10 << drive_num)));
+                        fdd_set_motor_enable(drive_num, (val & (0x10 << i)));
                 }
                 drive_num     = real_drive(fdc, val & 0x03);
                 current_drive = drive_num;
@@ -1075,6 +1080,7 @@ fdc_write(uint16_t addr, uint8_t val, void *priv)
                             /* Three conditions under which the command should fail. */
                             if ((drive_num >= FDD_NUM) || !fdd_get_flags(drive_num) || !motoron[drive_num] || fdd_track0(drive_num)) {
                                 fdc_log("Failed recalibrate\n");
+                                fdc_log("  fdcNum: %d, driveNum: %d, mot: %d, trk0: %d\n", fdc->drive, drive_num, motoron[drive_num], fdd_track0(drive_num));
                                 if ((drive_num >= FDD_NUM) || !fdd_get_flags(drive_num) || !motoron[drive_num])
                                     fdc->st0 = 0x70 | (fdc->params[0] & 3);
                                 else
@@ -2371,12 +2377,25 @@ fdc_init(const device_t *info)
 
     timer_add(&fdc->timer, fdc_callback, fdc, 0);
 
-    d86f_set_fdc(fdc);
-    fdi_set_fdc(fdc);
-    fdd_set_fdc(fdc);
-    imd_set_fdc(fdc);
-    img_set_fdc(fdc);
-    mfm_set_fdc(fdc);
+    if (fdc->flags & FDC_FLAG_EXTDRIVE34) {
+        for (int i = 2; i < 4; i++) {
+            d86f_set_fdc(fdc, i);
+            fdi_set_fdc(fdc, i);
+            fdd_set_fdc(fdc, i);
+            imd_set_fdc(fdc, i);
+            img_set_fdc(fdc, i);
+            mfm_set_fdc(fdc, i);
+        }
+    } else {
+        for (int i = 0; i < FDD_NUM; i++) {
+            d86f_set_fdc(fdc, i);
+            fdi_set_fdc(fdc, i);
+            fdd_set_fdc(fdc, i);
+            imd_set_fdc(fdc, i);
+            img_set_fdc(fdc, i);
+            mfm_set_fdc(fdc, i);
+        }
+    }
 
     fdc_reset(fdc);
 
@@ -2676,6 +2695,21 @@ const device_t fdc_ps2_mca_device = {
     .flags         = 0,
     .local         = FDC_FLAG_FINTR | FDC_FLAG_DENSEL_INVERT | FDC_FLAG_NO_DSR_RESET | FDC_FLAG_AT |
                      FDC_FLAG_PS2_MCA,
+    .init          = fdc_init,
+    .close         = fdc_close,
+    .reset         = fdc_reset,
+    .available     = NULL,
+    .speed_changed = NULL,
+    .force_redraw  = NULL,
+    .config        = NULL
+};
+
+const device_t fdc_ps2_ext_device = {
+    .name          = "PS/2 MCA Floppy Drive Controller (Secondary)",
+    .internal_name = "fdc_ps2_mca_sec",
+    .flags         = 0,
+    .local         = FDC_FLAG_FINTR | FDC_FLAG_DENSEL_INVERT | FDC_FLAG_NO_DSR_RESET | FDC_FLAG_AT |
+    FDC_FLAG_PS2_MCA | FDC_FLAG_EXTDRIVE34,
     .init          = fdc_init,
     .close         = fdc_close,
     .reset         = fdc_reset,

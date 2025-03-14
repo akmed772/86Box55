@@ -58,6 +58,7 @@
 #define FDC_FLAG_SEC            0x20000 /* Is Secondary */
 #define FDC_FLAG_TER            0x40000 /* Is Tertiary */
 #define FDC_FLAG_QUA            0x80000 /* Is Quaternary */
+#define FDC_FLAG_EXTDRIVE34     0x100000 /* PS/2 Secondary FDC for third drive */
 
 typedef struct fdc_t {
     uint8_t dor;
@@ -261,6 +262,7 @@ extern const device_t fdc_at_nsc_device;
 extern const device_t fdc_at_nsc_dp8473_device;
 extern const device_t fdc_ps2_device;
 extern const device_t fdc_ps2_mca_device;
+extern const device_t fdc_ps2_ext_device;
 #endif
 
 #endif /*EMU_FDC_H*/

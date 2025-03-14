@@ -82,7 +82,7 @@ typedef struct mfm_t {
 } mfm_t;
 
 static mfm_t *mfm[FDD_NUM];
-static fdc_t *mfm_fdc;
+static fdc_t *mfm_fdc[FDD_NUM];
 
 #ifdef ENABLE_MFM_LOG
 int mfm_do_log = ENABLE_MFM_LOG;
@@ -515,7 +515,7 @@ mfm_close(int drive)
 }
 
 void
-mfm_set_fdc(void *fdc)
+mfm_set_fdc(void *fdc, int drive)
 {
-    mfm_fdc = (fdc_t *) fdc;
+    mfm_fdc[drive] = (fdc_t *) fdc;
 }

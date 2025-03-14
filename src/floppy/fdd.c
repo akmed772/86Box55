@@ -94,7 +94,7 @@ DRIVE drives[FDD_NUM];
 
 uint64_t motoron[FDD_NUM];
 
-fdc_t *fdd_fdc;
+fdc_t *fdd_fdc[FDD_NUM];
 
 d86f_handler_t d86f_handler[FDD_NUM];
 
@@ -577,7 +577,7 @@ fdd_poll(void *priv)
     if (fdd_notfound) {
         fdd_notfound--;
         if (!fdd_notfound)
-            fdc_noidam(fdd_fdc);
+            fdc_noidam(fdd_fdc[drive]);
     }
 }
 
@@ -667,9 +667,9 @@ fdd_stop(int drive)
 }
 
 void
-fdd_set_fdc(void *fdc)
+fdd_set_fdc(void *fdc, int drive)
 {
-    fdd_fdc = (fdc_t *) fdc;
+    fdd_fdc[drive] = (fdc_t *) fdc;
 }
 
 void

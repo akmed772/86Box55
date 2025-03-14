@@ -22,6 +22,7 @@ add_library(fdd OBJECT
     fdc_magitronic.c
     fdc_monster.c
     fdc_pii15xb.c
+    fdc_ps2ext.c
     fdi2raw.c
     fdd_common.c
     fdd_86f.c

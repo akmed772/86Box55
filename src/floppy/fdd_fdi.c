@@ -51,7 +51,7 @@ typedef struct fdi_t {
 } fdi_t;
 
 static fdi_t *fdi[FDD_NUM];
-static fdc_t *fdi_fdc;
+static fdc_t *fdi_fdc[FDD_NUM];
 
 #ifdef ENABLE_FDI_LOG
 int fdi_do_log = ENABLE_FDI_LOG;
@@ -147,12 +147,12 @@ side_flags(int drive)
 }
 
 static int
-fdi_density(void)
+fdi_density(int drive)
 {
-    if (!fdc_is_mfm(fdi_fdc))
+    if (!fdc_is_mfm(fdi_fdc[drive]))
         return 0;
 
-    switch (fdc_get_bit_rate(fdi_fdc)) {
+    switch (fdc_get_bit_rate(fdi_fdc[drive])) {
         case 0:
             return 2;
 
@@ -181,11 +181,11 @@ extra_bit_cells(int drive, int side)
     int          raw_size   = 0;
     int          is_300_rpm = 0;
 
-    density = fdi_density();
+    density = fdi_density(drive);
 
     is_300_rpm = (fdd_getrpm(drive) == 300);
 
-    switch (fdc_get_bit_rate(fdi_fdc)) {
+    switch (fdc_get_bit_rate(fdi_fdc[drive])) {
         case 0:
             raw_size = is_300_rpm ? 200000 : 166666;
             break;
@@ -252,7 +252,7 @@ index_hole_pos(int drive, int side)
     const fdi_t *dev = fdi[drive];
     int          density;
 
-    density = fdi_density();
+    density = fdi_density(drive);
 
     return (dev->trackindex[side][density]);
 }
@@ -263,7 +263,7 @@ get_raw_size(int drive, int side)
     const fdi_t *dev = fdi[drive];
     int          density;
 
-    density = fdi_density();
+    density = fdi_density(drive);
 
     return (dev->tracklen[side][density]);
 }
@@ -274,7 +274,7 @@ encoded_data(int drive, int side)
     fdi_t *dev     = fdi[drive];
     int    density = 0;
 
-    density = fdi_density();
+    density = fdi_density(drive);
 
     return ((uint16_t *) dev->track_data[side][density]);
 }
@@ -393,7 +393,7 @@ fdi_close(int drive)
 }
 
 void
-fdi_set_fdc(void *fdc)
+fdi_set_fdc(void *fdc, int drive)
 {
-    fdi_fdc = (fdc_t *) fdc;
+    fdi_fdc[drive] = (fdc_t *) fdc;
 }

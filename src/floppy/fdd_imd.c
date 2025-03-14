@@ -66,7 +66,7 @@ typedef struct imd_t {
 } imd_t;
 
 static imd_t *imd[FDD_NUM];
-static fdc_t *imd_fdc;
+static fdc_t *imd_fdc[FDD_NUM];
 
 #ifdef ENABLE_IMD_LOG
 int imd_do_log = ENABLE_IMD_LOG;
@@ -592,8 +592,8 @@ format_conditions(int drive)
     int          temp;
 
     side = fdd_get_head(drive);
-    temp = (fdc_get_format_sectors(imd_fdc) == dev->tracks[track][side].params[3]);
-    temp = temp && (fdc_get_format_n(imd_fdc) == dev->tracks[track][side].params[4]);
+    temp = (fdc_get_format_sectors(imd_fdc[drive]) == dev->tracks[track][side].params[3]);
+    temp = temp && (fdc_get_format_n(imd_fdc[drive]) == dev->tracks[track][side].params[4]);
 
     return temp;
 }
@@ -975,7 +975,7 @@ imd_close(int drive)
 }
 
 void
-imd_set_fdc(void *fdc)
+imd_set_fdc(void *fdc, int drive)
 {
-    imd_fdc = (fdc_t *) fdc;
+    imd_fdc[drive] = (fdc_t *) fdc;
 }

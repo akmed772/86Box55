@@ -29,6 +29,7 @@ extern int fdc_current[FDC_MAX];
 /* Controller types. */
 #define FDC_NONE     0
 #define FDC_INTERNAL 1
+#define FDC_PS2EXT   2
 
 extern const device_t fdc_b215_device;
 extern const device_t fdc_pii151b_device;
@@ -39,6 +40,8 @@ extern const device_t fdc_compaticard_ii_device;
 extern const device_t fdc_compaticard_iv_device;
 
 extern const device_t fdc_monster_device;
+
+extern const device_t fdc_ps2_ext_adapter_device;
 
 extern void fdc_card_init(void);
 

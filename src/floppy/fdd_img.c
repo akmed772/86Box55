@@ -67,7 +67,7 @@ typedef struct img_t {
 
 
 static img_t    *img[FDD_NUM];
-static fdc_t    *img_fdc;
+static fdc_t    *img_fdc[FDD_NUM];
 
 static double    bit_rate_300;
 static char     *ext;
@@ -480,9 +480,9 @@ static int
 format_conditions(int drive)
 {
     const img_t *dev  = img[drive];
-    int          temp = (fdc_get_format_sectors(img_fdc) == dev->sectors);
+    int          temp = (fdc_get_format_sectors(img_fdc[drive]) == dev->sectors);
 
-    temp = temp && (fdc_get_format_n(img_fdc) == dev->sector_size);
+    temp = temp && (fdc_get_format_n(img_fdc[drive]) == dev->sector_size);
     temp = temp && (dev->xdf_type == 0);
 
     return temp;
@@ -1284,7 +1284,7 @@ img_close(int drive)
 }
 
 void
-img_set_fdc(void *fdc)
+img_set_fdc(void *fdc, int drive)
 {
-    img_fdc = (fdc_t *) fdc;
+    img_fdc[drive] = (fdc_t *) fdc;
 }

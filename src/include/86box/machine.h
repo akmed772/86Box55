@@ -479,6 +479,7 @@ extern int machine_at_m290_init(const machine_t *);
 #endif /* USE_OLIVETTI */
 
 extern int machine_at_shuttle386sx_init(const machine_t *);
+extern int machine_at_if386ax_init(const machine_t *);
 extern int machine_at_adi386sx_init(const machine_t *);
 extern int machine_at_cmdsl386sx16_init(const machine_t *);
 extern int machine_at_cmdsl386sx25_init(const machine_t *);

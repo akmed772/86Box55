@@ -3209,7 +3209,7 @@ static scancode scancode_set8a[512] =
       {.mk = {       0 }, .brk = {       0 } }  /* 1ff */
     // clang-format on
 };
-#define ENABLE_KEYBOARD_AT_LOG 1
+
 #ifdef ENABLE_KEYBOARD_AT_LOG
 int keyboard_at_do_log = ENABLE_KEYBOARD_AT_LOG;
 

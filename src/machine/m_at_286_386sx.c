@@ -566,22 +566,6 @@ machine_at_shuttle386sx_init(const machine_t *model)
     return ret;
 }
 
-static uint8_t
-port_xx_read(uint16_t port, void *priv)
-{
-    pclog("p%x_r: [%04x:%04x]\n", port, cs >> 4, cpu_state.pc );
-
-    return 0;
-}
-
-void
-port_xx_write(uint16_t port, uint8_t val, void *priv)
-{
-    pclog("p%x_w: [%04x:%04x] val=%02x\n", port, cs >> 4, cpu_state.pc, val );
-
-    return;
-}
-
 int
 machine_at_if386ax_init(const machine_t *model)
 {
@@ -602,10 +586,6 @@ machine_at_if386ax_init(const machine_t *model)
     if (fdc_current[0] == FDC_INTERNAL)
         device_add(&fdc_at_device);
 
-    io_sethandler(0x0063, 1, port_xx_read, NULL, NULL, port_xx_write, NULL, NULL, NULL);
-    io_sethandler(0x0065, 1, port_xx_read, NULL, NULL, port_xx_write, NULL, NULL, NULL);
-    io_sethandler(0x03DD, 1, port_xx_read, NULL, NULL, port_xx_write, NULL, NULL, NULL);
-    io_sethandler(0x03DE, 1, port_xx_read, NULL, NULL, port_xx_write, NULL, NULL, NULL);
     return ret;
 }
 

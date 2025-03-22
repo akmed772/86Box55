@@ -51,7 +51,6 @@ opRETF_a16(UNUSED(uint32_t fetchdat))
 {
     int cycles_old = cycles;
     UN_USED(cycles_old);
-    // pclog("RETF [%x:%x]->%x:%x ax=%x flags=%x\n", cs >> 4, cpu_state.pc, readmemw(ss, SP + 2), readmemw(ss, SP), AX, cpu_state.flags);
 
     CPU_BLOCK_END();
     RETF_a16(0);
@@ -80,7 +79,6 @@ opRETF_a16_imm(uint32_t fetchdat)
     uint16_t offset     = getwordf();
     int      cycles_old = cycles;
     UN_USED(cycles_old);
-    // pclog("RETF [%x:%x]->%x:%x ax=%x flags=%x\n", cs >> 4, cpu_state.pc, readmemw(ss, SP + 2), readmemw(ss, SP), AX, cpu_state.flags);
 
     CPU_BLOCK_END();
     RETF_a16(offset);
@@ -191,7 +189,6 @@ opIRET(UNUSED(uint32_t fetchdat))
 {
     int cycles_old = cycles;
     UN_USED(cycles_old);
-    // pclog("IRET [%x:%x]->%x:%x ax=%x flags=%x\n", cs >> 4, cpu_state.pc, readmemw(ss, ((SP + 2) & 0xffff)), readmemw(ss, SP), AX, cpu_state.flags);
 
     if ((cr0 & 1) && (cpu_state.eflags & VM_FLAG) && (IOPL != 3)) {
         if (cr4 & CR4_VME) {

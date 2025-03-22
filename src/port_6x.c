@@ -56,6 +56,7 @@ port_6x_write(uint16_t port, uint8_t val, void *priv)
     port &= 3;
 
     cycles -= cycles_sub;
+    pclog("p61: [%04x:%04x] val=%02x\n", cs >> 4, cpu_state.pc,val );
 
     if ((port == 3) && (dev->flags & PORT_6X_MIRROR))
         port = 1;
@@ -100,6 +101,7 @@ port_61_read(UNUSED(uint16_t port), void *priv)
     uint8_t          ret = 0xff;
 
     cycles -= cycles_sub;
+    pclog("p61: [%04x:%04x]\n", cs >> 4, cpu_state.pc );
 
     if (dev->flags & PORT_6X_EXT_REF) {
         ret = ppi.pb & 0x0f;

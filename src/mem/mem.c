@@ -770,7 +770,8 @@ write_mem_b(uint32_t addr, uint8_t val)
 
     mem_logical_addr = addr;
     addr &= rammask;
-
+    if(addr >= 0x400 && addr < 0x500)
+    pclog("memwrite: %x %x", addr, val);
     map = write_mapping[addr >> MEM_GRANULARITY_BITS];
     if (map && map->write_b)
         map->write_b(addr, val, map->priv);
@@ -1837,6 +1838,8 @@ mem_read_ram(uint32_t addr, UNUSED(void *priv))
         mem_log("Read  B       %02X from %08X\n", ram[addr], addr);
 #endif
 
+if(addr >= 0x400 && addr < 0x500 && (addr != 0x41a) && (addr != 0x41c))
+pclog("memRb: [%04x:%04x] %x %02x ax=%04x bx=%04x cx=%04x di=%04x\n", cs >> 4, cpu_state.pc, addr, ram[addr], AX, BX, CX, DI);
     if (cpu_use_exec)
         addreadlookup(mem_logical_addr, addr);
 
@@ -1851,6 +1854,8 @@ mem_read_ramw(uint32_t addr, UNUSED(void *priv))
         mem_log("Read  W     %04X from %08X\n", *(uint16_t *) &ram[addr], addr);
 #endif
 
+if(addr >= 0x400 && addr < 0x500 && (addr != 0x41a) && (addr != 0x41c))
+pclog("memRb: [%04x:%04x] %x %02x ax=%04x bx=%04x cx=%04x di=%04x\n", cs >> 4, cpu_state.pc, addr, ram[addr], AX, BX, CX, DI);
     if (cpu_use_exec)
         addreadlookup(mem_logical_addr, addr);
 
@@ -2097,6 +2102,8 @@ mem_write_ram(uint32_t addr, uint8_t val, UNUSED(void *priv))
     if ((addr >= 0xa0000) && (addr <= 0xbffff))
         mem_log("Write B       %02X to   %08X\n", val, addr);
 #endif
+if(addr >= 0x400 && addr < 0x500)
+pclog("memWb: [%04x:%04x] %x %02x\n", cs >> 4, cpu_state.pc, addr, val);
     if (cpu_use_exec) {
         addwritelookup(mem_logical_addr, addr);
         mem_write_ramb_page(addr, val, &pages[addr >> 12]);
@@ -2111,6 +2118,8 @@ mem_write_ramw(uint32_t addr, uint16_t val, UNUSED(void *priv))
     if ((addr >= 0xa0000) && (addr <= 0xbffff))
         mem_log("Write W     %04X to   %08X\n", val, addr);
 #endif
+if(addr >= 0x400 && addr < 0x500)
+pclog("memWw: [%04x:%04x] %x %04x\n", cs >> 4, cpu_state.pc, addr, val);
     if (cpu_use_exec) {
         addwritelookup(mem_logical_addr, addr);
         mem_write_ramw_page(addr, val, &pages[addr >> 12]);

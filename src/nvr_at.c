@@ -635,6 +635,7 @@ nvr_reg_write(uint16_t reg, uint8_t val, void *priv)
             break;
 
         default: /* non-RTC registers are just NVRAM */
+            pclog("nvrW: [%04X:%04X] %x %x DS %04X\n", cs >> 4, cpu_state.pc, reg, val, DS);
             nvr_reg_common_write(reg, val, nvr, local);
             break;
     }

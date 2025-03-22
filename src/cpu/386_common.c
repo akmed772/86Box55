@@ -1655,6 +1655,7 @@ x86_int_sw(int num)
         cpu_use_exec ? pmodeint(num, 1) : pmodeint_2386(num, 1);
     else {
         addr = (num << 2) + idt.base;
+        // pclog("INT [%x:%x] %x %08X ax=%x\n", cs >> 4, cpu_state.pc, num, readmeml(0, addr), AX);
 
         if ((num << 2UL) + 3UL > idt.limit)
             x86_int(0x0d);

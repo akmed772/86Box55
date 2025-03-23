@@ -4664,12 +4664,11 @@ const machine_t machines[] = {
         .snd_device = NULL,
         .net_device = NULL
     },
-    /* Has an AMI Keyboard BIOS PLUS KBC firmware ('8'). */
-    { .name = "Oki if386AX",
-        .internal_name = "if386ax",
+    { .name = "[NEAT] OKI if386AX30L",
+        .internal_name = "if386sx",
         .type = MACHINE_TYPE_386SX,
         .chipset = MACHINE_CHIPSET_NEAT,
-        .init = machine_at_if386ax_init,
+        .init = machine_at_if386sx_init,
         .p1_handler = NULL,
         .gpio_handler = NULL,
         .available_flag = MACHINE_AVAILABLE,
@@ -4685,7 +4684,7 @@ const machine_t machines[] = {
             .max_multi = 0
         },
         .bus_flags = MACHINE_AT,
-        .flags = MACHINE_FLAGS_NONE,
+        .flags = MACHINE_VIDEO,
         .ram = {
             .min = 1024,
             .max = 4096,

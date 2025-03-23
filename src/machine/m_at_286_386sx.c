@@ -567,12 +567,12 @@ machine_at_shuttle386sx_init(const machine_t *model)
 }
 
 int
-machine_at_if386ax_init(const machine_t *model)
+machine_at_if386sx_init(const machine_t *model)
 {
     int ret;
 
-    ret = bios_load_interleaved("roms/machines/if386ax/OKI_IF386AX_odd.bin",
-                                "roms/machines/if386ax/OKI_IF386AX_even.bin",
+    ret = bios_load_interleaved("roms/machines/if386sx/OKI_IF386SX_odd.bin",
+                                "roms/machines/if386sx/OKI_IF386SX_even.bin",
                                 0x000f0000, 65536, 0);
 
     if (bios_only || !ret)
@@ -583,6 +583,8 @@ machine_at_if386ax_init(const machine_t *model)
 
     device_add(&neat_device);
 
+    if (gfxcard[0] == VID_INTERNAL)
+        device_add(&if386jega_device);
     if (fdc_current[0] == FDC_INTERNAL)
         device_add(&fdc_at_device);
 

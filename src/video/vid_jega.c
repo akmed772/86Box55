@@ -791,11 +791,9 @@ if386_p6x_write(uint16_t port, uint8_t val, void *priv)
                 }
             } else { /* Monochrome LCD */
                 for (int c = 0; c < 256; c++) {
-                    int cval = (c & 0xf) + 1;
-                    // if (cval == 0x10)
-                    //     cval = 0xff;
-                    // else
-                        cval = ((c & 0x0e) << 4) | 0x1f;
+                    int cval = 0;
+                    if (c & 0x0f)
+                        cval = ((c & 0x0e) * 0x10) + 0x1f;
                     pallook64[c] = makecol32(cval, cval, cval);
                     pallook16[c] = makecol32(cval, cval, cval);
                 }

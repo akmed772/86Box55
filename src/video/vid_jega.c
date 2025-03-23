@@ -807,29 +807,7 @@ if386_p6x_write(uint16_t port, uint8_t val, void *priv)
                 resetx86();
             }
         }
-        // pclog("P65: ");
-        // for (int i = 0; i < 6; i++)
-        //     pclog("[%02X]%02X ", i, p65[i]);
-        // pclog("\n");
     }
-    // if (port == 0x3dd && val < 0x30)
-    //     p3de_idx = val;
-    // if (port == 0x3de)
-    //     p3de[p3de_idx] = val;
-    // if (port == 0x3de && p3de_idx == 0x1f) {
-    //     pclog("Pal3DE: ");
-    //     for (int i = 0; i < 0x10; i++)
-    //         pclog("[%02X]%02X ", i, p3de[i]);
-    //     pclog("\n        ");
-    //     for (int i = 0x10; i < 0x20; i++)
-    //         pclog("[%02X]%02X ", i, p3de[i]);
-    //     pclog("\n        ");
-    //     for (int i = 0x20; i < 0x22; i++)
-    //         pclog("[%02X]%02X ", i, p3de[i]);
-    //     pclog("\n");
-    // }
-    // if (port == 0x3de && p3de_idx > 0x1f)
-    //     pclog("3DE: [%02X]%02X\n", p3de_idx, p3de[p3de_idx]);
     return;
 }
 

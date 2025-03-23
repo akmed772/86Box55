@@ -567,31 +567,6 @@ machine_at_shuttle386sx_init(const machine_t *model)
 }
 
 int
-machine_at_if386sx_init(const machine_t *model)
-{
-    int ret;
-
-    ret = bios_load_interleaved("roms/machines/if386sx/OKI_IF386SX_odd.bin",
-                                "roms/machines/if386sx/OKI_IF386SX_even.bin",
-                                0x000f0000, 65536, 0);
-
-    if (bios_only || !ret)
-        return ret;
-
-    machine_at_common_init(model);
-    device_add(&keyboard_at_device);
-
-    device_add(&neat_device);
-
-    if (gfxcard[0] == VID_INTERNAL)
-        device_add(&if386jega_device);
-    if (fdc_current[0] == FDC_INTERNAL)
-        device_add(&fdc_at_device);
-
-    return ret;
-}
-
-int
 machine_at_adi386sx_init(const machine_t *model)
 {
     int ret;
@@ -662,6 +637,31 @@ machine_at_cmdsl386sx16_init(const machine_t *model)
     /* Two serial ports - on the real hardware SL386SX-16, they are on the single UMC UM82C452. */
     device_add_inst(&ns16450_device, 1);
     device_add_inst(&ns16450_device, 2);
+
+    return ret;
+}
+
+int
+machine_at_if386sx_init(const machine_t *model)
+{
+    int ret;
+
+    ret = bios_load_interleaved("roms/machines/if386sx/OKI_IF386SX_odd.bin",
+                                "roms/machines/if386sx/OKI_IF386SX_even.bin",
+                                0x000f0000, 65536, 0);
+
+    if (bios_only || !ret)
+        return ret;
+
+    machine_at_common_init(model);
+    device_add(&keyboard_at_device);
+
+    device_add(&neat_device);
+
+    if (gfxcard[0] == VID_INTERNAL)
+        device_add(&if386jega_device);
+    if (fdc_current[0] == FDC_INTERNAL)
+        device_add(&fdc_at_device);
 
     return ret;
 }

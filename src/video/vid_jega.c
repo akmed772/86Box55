@@ -60,7 +60,7 @@
 #define RINVALID_INDEX 0x30
 
 #define JEGA_PATH_BIOS     "roms/video/jega/JEGABIOS.BIN"
-#define IF386_PATH_VBIOS     "roms/video/jega/OKI_IF386AX_VBIOS.bin"
+#define IF386_PATH_VBIOS   "roms/video/jega/OKI_IF386SX_VBIOS.bin"
 #define JEGA_PATH_FONTDBCS "roms/video/jega/JPNZN16X.FNT"
 #define SBCS19_FILESIZE    (256 * 19 * 2) /* 8 x 19 x 256 chr x 2 pages */
 #define DBCS16_CHARS       0x2c10
@@ -672,10 +672,10 @@ jega_close(void *priv)
             fprintf(f, "Regs %02X: %4X\n", i, jega->regs[i]);
         for (int i = 0; i < 32; i++)
             fprintf(f, "Attr %02X: %4X\n", i, jega->attrregs[i]);
-            for (int i = 0; i < 16; i++)
-                fprintf(f, "JEGAPal %02X: %4X\n", i, jega->egapal[i]);
-                for (int i = 0; i < 16; i++)
-                    fprintf(f, "EGAPal %02X: %4X\n", i, jega->ega.egapal[i]);
+        for (int i = 0; i < 16; i++)
+            fprintf(f, "JEGAPal %02X: %4X\n", i, jega->egapal[i]);
+        for (int i = 0; i < 16; i++)
+            fprintf(f, "EGAPal %02X: %4X\n", i, jega->ega.egapal[i]);
         for (int i = 0; i < 64; i++)
         fprintf(f, "RealPal %02X: %4X\n", i, jega->pallook[i]);
         fclose(f);
@@ -744,12 +744,10 @@ if386_p6x_read(uint16_t port, void *priv)
     uint8_t ret = INVALIDACCESS8;
     if (port == 0x63) {
         ret = p65idx;
-    }
-    else if (port == 0x65) {
+    } else if (port == 0x65) {
         ret = p65[p65idx];
     }
-    pclog("p%x_r: [%04x:%04x] [%02x]%02x\n", port, cs >> 4, cpu_state.pc , p65idx, ret);
-
+    // pclog("p%x_r: [%04x:%04x] [%02x]%02x\n", port, cs >> 4, cpu_state.pc , p65idx, ret);
     return ret;
 }
 
@@ -793,10 +791,11 @@ if386_p6x_write(uint16_t port, uint8_t val, void *priv)
                 }
             } else { /* Monochrome LCD */
                 for (int c = 0; c < 256; c++) {
-                    int cval = (c & 0xf ) + 1;
-                    if(cval == 0x10) cval = 0xff;
-                    else cval = (cval & 0x0e) * 0x11;
-                    
+                    int cval = (c & 0xf) + 1;
+                    // if (cval == 0x10)
+                    //     cval = 0xff;
+                    // else
+                        cval = ((c & 0x0e) << 4) | 0x1f;
                     pallook64[c] = makecol32(cval, cval, cval);
                     pallook16[c] = makecol32(cval, cval, cval);
                 }
@@ -829,6 +828,12 @@ if386jega_init(const device_t *info)
     return jega;
 }
 
+static int
+if386jega_available(void)
+{
+    return (rom_present(IF386_PATH_VBIOS) && rom_present(JEGA_PATH_FONTDBCS));
+}
+
 const device_t if386jega_device = {
     .name          = "JEGA (if386AX)",
     .internal_name = "if386jega",
@@ -837,7 +842,7 @@ const device_t if386jega_device = {
     .init          = if386jega_init,
     .close         = jega_close,
     .reset         = NULL,
-    .available     = jega_standalone_available,
+    .available     = if386jega_available,
     .speed_changed = jega_speed_changed,
     .force_redraw  = NULL,
     .config        = NULL

@@ -2496,7 +2496,7 @@ static void
 da2_gdcropB(uint32_t addr,uint8_t bitmask, da2_t *da2)
 {
     for (uint8_t i = 0; i < 8; i++) {
-        if (da2->planemask & (1 << i)) {
+        if (da2->gdcreg[LG_MAP_MASKJ] & (1 << i)) {
             // da2_log("da2_gdcropB o%x a%x d%x p%d m%x\n", da2->gdcreg[LG_COMMAND] & 0x03, addr, da2->gdcinput[i], i, bitmask);
             switch (da2->gdcreg[LG_COMMAND] & 0x03) {
                 case 0: /*Set*/
@@ -2529,7 +2529,7 @@ da2_gdcropW(uint32_t addr, uint16_t bitmask, da2_t *da2)
     uint8_t bitmask_l = bitmask & 0xff;
     uint8_t bitmask_h = bitmask >> 8;
     for (uint8_t i = 0; i < 8; i++) {
-        if (da2->planemask & (1 << i)) {
+        if (da2->gdcreg[LG_MAP_MASKJ] & (1 << i)) {
             // da2_log("da2_gdcropW m%x a%x d%x i%d ml%x mh%x\n", da2->gdcreg[LG_COMMAND] & 0x03, addr, da2->gdcinput[i], i, da2->gdcreg[LG_BIT_MASK_LOW], da2->gdcreg[LG_BIT_MASK_HIGH]);
             switch (da2->gdcreg[LG_COMMAND] & 0x03) {
                 case 0: /*Set*/
@@ -2812,6 +2812,7 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
                 bitmask &= val;
 
                 for (uint8_t i = 0; i < 8; i++)
+                    if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i))
                         da2->gdcinput[i] = (da2->gdcreg[LG_SET_RESETJ] & (1 << i)) ? 0xff : 0;
                 da2_gdcropB(addr, bitmask, da2);
                 break;
@@ -2915,6 +2916,7 @@ da2_mmio_gc_writeW(uint32_t addr, uint16_t val, void *priv)
             bitmask &= val;
 
             for (uint8_t i = 0; i < 8; i++)
+                if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i))
                     da2->gdcinput[i] = (da2->gdcreg[LG_SET_RESETJ] & (1 << i)) ? 0xffff : 0;
             da2_gdcropW(addr, bitmask, da2);
             break;

@@ -263,14 +263,14 @@
 #define LG_SET_RESET_2          0x10
 
 #ifndef RELEASE_BUILD
-// #define ENABLE_DA2_LOG 1
+#define ENABLE_DA2_LOG 1
 #endif
 
 #ifdef ENABLE_DA2_LOG
-// #    define ENABLE_DA2_DEBUGIO 1
-// #    define ENABLE_DA2_DEBUGBLT 1
-// #    define ENABLE_DA2_DEBUGVRAM 1
-// #    define ENABLE_DA2_DEBUGFULLSCREEN 1
+#    define ENABLE_DA2_DEBUGIO 1
+#    define ENABLE_DA2_DEBUGBLT 1
+#    define ENABLE_DA2_DEBUGVRAM 1
+#    define ENABLE_DA2_DEBUGFULLSCREEN 1
 // #    define ENABLE_DA2_DEBUGMONWAIT 1
 int da2_do_log = ENABLE_DA2_LOG;
 
@@ -760,12 +760,20 @@ da2_bitblt_parse(da2_t *da2)
     switch (da2->bitblt.payload[0]) {
         case 0x88:
         case 0x89:
+            value32 = da2->bitblt.payload[3];
+            value32 <<= 8;
+            value32 |= da2->bitblt.payload[2];
+            da2_bltreglog("[%02x] %02x: %04x (%d)\n", da2->bitblt.payload[0], da2->bitblt.payload[1], value32, value32);
+            da2->bitblt.reg[da2->bitblt.payload[1]] = value32;
+            break;
         case 0x95:
             value32 = da2->bitblt.payload[3];
             value32 <<= 8;
             value32 |= da2->bitblt.payload[2];
             da2_bltreglog("[%02x] %02x: %04x (%d)\n", da2->bitblt.payload[0], da2->bitblt.payload[1], value32, value32);
             da2->bitblt.reg[da2->bitblt.payload[1]] = value32;
+            /* Also set the value to GDC regs. */
+            da2->gdcreg[da2->bitblt.payload[1]] = value32;
             break;
         case 0x91:
             value32 = da2->bitblt.payload[5];
@@ -2780,12 +2788,12 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
         }
 
         switch (da2->writemode) {
-            case 2: /* equiv to vga write mode 1 */
+            case 2: /* equiv to vga write mode 1 (write latched data) */
                 for (uint8_t i = 0; i < 8; i++)
                     if (da2->planemask & (1 << i))
                         da2_vram_w(addr | i, da2->gdcsrc[i], da2);
                 break;
-            case 0:/* equiv to vga write mode 0 */
+            case 0:/* equiv to vga write mode 0 (write latched data with Set/Reset, or write CPU data, masked by Bit Mask) */
                 if (da2->gdcreg[LG_DATA_ROTATION] & 7)
                     val = svga_rotate[da2->gdcreg[LG_DATA_ROTATION] & 7][val];
                 if (bitmask == 0xff && !(da2->gdcreg[LG_COMMAND] & 0x03) && (!da2->gdcreg[LG_ENABLE_SRJ])) {
@@ -2801,12 +2809,12 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
                     da2_gdcropB(addr, bitmask, da2);
                 }
                 break;
-            case 1:/* equiv to vga write mode 2 */
+            case 1:/* equiv to vga write mode 2 (Set/Reset chosen by CPU data) */
                     for (uint8_t i = 0; i < 8; i++)
                         da2->gdcinput[i] = ((val & (1 << i)) ? 0xff : 0);
                     da2_gdcropB(addr, bitmask, da2);
                 break;
-            case 3:/* equiv to vga write mode 3 */
+            case 3:/* equiv to vga write mode 3 (write latched data with Set/Reset masked by CPU data AND Bit Mask) */
                 if (da2->gdcreg[LG_DATA_ROTATION] & 7)
                     val = svga_rotate[da2->gdcreg[LG_DATA_ROTATION] & 7][val];
                 bitmask &= val;

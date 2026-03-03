@@ -834,7 +834,7 @@ da2_bitblt_parse(da2_t *da2)
     /* clear payload memory */
     memset(da2->bitblt.payload, 0x00, DA2_BLT_MEMSIZE);
     da2->bitblt.payload_addr = 0;
-    da2->bitblt.indata       = 0;
+    // da2->bitblt.indata       = 0;
 }
 
 static void
@@ -1205,7 +1205,8 @@ static void
 da2_bitblt_addpayload(uint8_t val, void *priv)
 {
     da2_t *da2 = (da2_t *) priv;
-    da2->bitblt.indata = 1;
+    // da2->bitblt.indata = 1;
+    // da2_log("da2p %x %x %x\n", da2->bitblt.payload_addr, da2->bitblt.payload_opsize, val);
     if (da2->bitblt.payload_addr >= DA2_BLT_MEMSIZE)
         da2_log("da2_mmio_write payload overflow! addr %x, val %x\n", da2->bitblt.payload_addr, val);
     else {
@@ -1214,7 +1215,8 @@ da2_bitblt_addpayload(uint8_t val, void *priv)
             da2->bitblt.payload_addr++;
             switch (val) {
                 case 0x00:
-                    da2->bitblt.payload_opsize = 1;
+                    da2->bitblt.payload_addr = 0;
+                    da2->bitblt.payload_opsize = 0;
                     break;
                 case 0x88:
                 case 0x89:
@@ -1233,6 +1235,8 @@ da2_bitblt_addpayload(uint8_t val, void *priv)
                 default:
                     da2_log("addpayload: Unknown PreOP! %x\n", val);
                     da2->bitblt.payload_addr = 0; /* ignore input */
+                    da2->bitblt.payload_opsize = 0;
+                    // da2->bitblt.indata = 0;
                     break;
             }
         } else if (da2->bitblt.payload_addr < da2->bitblt.payload_opsize) {
@@ -1584,7 +1588,7 @@ da2_in(uint16_t addr, void *priv)
                 if (da2->bitblt.exec != DA2_BLT_CIDLE) {
                     temp |= 0x08; /* wait (bit 3 + bit 0) ? need verify */
                 }
-                // if (da2->bitblt.indata) temp |= 0x08;
+                // if (da2->bitblt.indata) temp |= 0x01;
 #ifdef ENABLE_DA2_DEBUGMONWAIT
                 da2_iolog("DA2 In %04X(%02X) %04X %04X:%04X\n", addr, da2->ioctladdr, temp, cs >> 4, cpu_state.pc);
 #endif
@@ -2813,9 +2817,6 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
                 for (uint8_t i = 0; i < 8; i++)
                     da2->gdcinput[i] = da2->gdcla[i];
                 da2_gdcropB(addr, bitmask, da2);
-                // for (uint8_t i = 0; i < 8; i++)
-                //     if (da2->gdcreg[LG_MAP_MASKJ] & (1 << i))
-                //         da2_vram_w(addr | i, da2->gdcsrc[i], da2);
                 break;
             case 0:/* equiv to vga write mode 0 (write latched data with Set/Reset, or write CPU data, masked by Bit Mask) */
                 if (da2->gdcreg[LG_DATA_ROTATION] & 7)
@@ -2841,7 +2842,6 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
             case 3:/* equiv to vga write mode 3 (write latched data with Set/Reset masked by CPU data AND Bit Mask) */
                 if (da2->gdcreg[LG_DATA_ROTATION] & 7)
                     val = svga_rotate[da2->gdcreg[LG_DATA_ROTATION] & 7][val];
-                // bitmask &= val;
                 bitmask = val; /* In mode 3, Bitmask register is ignored in Windows 3.0 */
                 
                 for (uint8_t i = 0; i < 8; i++)
@@ -2915,11 +2915,6 @@ da2_mmio_gc_writeW(uint32_t addr, uint16_t val, da2_t *da2)
             for (uint8_t i = 0; i < 8; i++)
                 da2->gdcinput[i] = da2->gdcla[i];
             da2_gdcropW(addr, bitmask, da2);
-            // for (uint8_t i = 0; i < 8; i++)
-            //     if (da2->gdcreg[LG_MAP_MASKJ] & (1 << i)) {
-            //         da2_vram_w(addr | i, da2->gdcsrc[i] & 0xff, da2);
-            //         da2_vram_w((addr + 8) | i, da2->gdcsrc[i] >> 8, da2);
-            //     }
             break;
         case 0:/* equiv to vga write mode 0 (write latched data with Set/Reset, or write CPU data, masked by Bit Mask) */
             if (da2->gdcreg[LG_DATA_ROTATION] & 15)
@@ -2948,7 +2943,6 @@ da2_mmio_gc_writeW(uint32_t addr, uint16_t val, da2_t *da2)
         case 3:/* equiv to vga write mode 3 (write latched data with Set/Reset masked by CPU data AND Bit Mask) */
             if (da2->gdcreg[LG_DATA_ROTATION] & 15)
                 val = da2_rightrotate(val, da2->gdcreg[LG_DATA_ROTATION] & 15);
-            // bitmask &= val;
             bitmask = val; /* In mode 3, Bitmask register is ignored in Windows 3.0 */
 
             for (uint8_t i = 0; i < 8; i++)

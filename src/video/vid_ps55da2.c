@@ -314,7 +314,7 @@ typedef struct da2_t {
     uint16_t crtc[32];
     uint16_t crtc_vpreg[128];
     uint8_t  crtc_vpsel;
-    uint8_t  gdcreg[64];
+    uint16_t  gdcreg[64];
     uint8_t  reg3ee[16];
     int      gdcaddr;
     uint8_t  attrc[0x40];
@@ -447,7 +447,7 @@ static video_timings_t timing_da2_mca =
 { .type = VIDEO_MCA, .write_b = 4, .write_w = 4, .write_l =  10, .read_b = 4, .read_w = 4, .read_l = 10 };
 
 static void     da2_recalctimings(da2_t *da2);
-static void     da2_mmio_gc_writeW(uint32_t addr, uint16_t val, void *p);
+static void     da2_mmio_gc_writeW(uint32_t addr, uint16_t val, da2_t *da2);
 static void     da2_bitblt_exec(void *p);
 static void     da2_updatevidselector(da2_t *da2);
 static void     da2_reset_ioctl(da2_t *da2);
@@ -529,6 +529,8 @@ da2_WritePlaneDataWithBitmask(uint32_t destaddr, const uint16_t mask, pixel32 *s
             | (da2_vram_r((destaddr + 8) | i, da2) << 16)
             | (da2_vram_r((destaddr + 0) | i, da2) << 24);
 
+    // da2->gdcreg[LG_BIT_MASK_LOW] = mask & 0xff;
+    // da2->gdcreg[LG_BIT_MASK_HIGH] = (mask >> 8) & 0xff;
     vidseq32 mask32in;
     mask32in.d = (uint32_t) mask;
     vidseq32 mask32;
@@ -872,7 +874,7 @@ da2_bitblt_load(da2_t *da2)
     da2->bitblt.x      = 0;
     da2->bitblt.y      = 0;
     da2->bitblt.exec   = DA2_BLT_CDONE;
-
+    da2->bitblt.indata = 0;
     // for (int i = 0; i <= 0x0b; i++) {
     //     da2->gdcreg[i] = da2->bitblt.reg[i];
     // }
@@ -880,14 +882,16 @@ da2_bitblt_load(da2_t *da2)
     // da2->gdcreg[LG_BIT_MASK_LOW] = da2->bitblt.maskl & 0xff;
     // da2->gdcreg[LG_BIT_MASK_HIGH] = (da2->bitblt.maskl >> 8) & 0xff;
     /* Put DBCS char used by OS/2 and DOS/V Extension */
-    if (!(da2->bitblt.reg[0xb] & 0x08)) {
+    if ((da2->bitblt.reg[0x10] & 0xff) == 0x04) {
+        da2->bitblt.reg[0x10] = 0; /* reset */
         da2->bitblt.exec    = DA2_BLT_CPUTCHAR;
         da2->bitblt.fcolor  = da2->bitblt.reg[0x1];
         da2->bitblt.srcaddr = da2->bitblt.reg[0x12];
         da2->bitblt.destaddr += 2;
 #ifdef ENABLE_DA2_DEBUGBLT
-        uint8_t sjis_h = IBMJtoSJIS(da2->bitblt.reg[0x12]) >> 8;
-        uint8_t sjis_l = IBMJtoSJIS(da2->bitblt.reg[0x12]) & 0xff;
+        uint16_t sjis_l = IBMJtoSJIS(da2->bitblt.reg[0x12]);
+        uint16_t sjis_h = sjis_l >> 8;
+        sjis_l &= 0xff;
         if (da2->bitblt.reg[0x12] < 0x100) {
             sjis_h = 0x20;
             sjis_l = da2->bitblt.reg[0x12];
@@ -1012,7 +1016,7 @@ da2_bitblt_exec(void *priv)
             break;
         case DA2_BLT_CLOAD:
             da2_bitblt_load(da2);
-            // da2->bitblt.indata = 0;
+            da2->bitblt.indata = 1;
             break;
         case DA2_BLT_CLINE:
             {
@@ -1174,9 +1178,10 @@ da2_bitblt_exec(void *priv)
             // if (da2->bitblt.indata)
             //     da2->bitblt.exec = DA2_BLT_CLOAD;
             // 
-            // da2->gdcreg[LG_BIT_MASK_LOW] = da2->bitblt.maskr & 0xff;
-            // da2->gdcreg[LG_BIT_MASK_HIGH] = (da2->bitblt.maskr >> 8) & 0xff;
             da2->bitblt.exec = DA2_BLT_CIDLE;
+            // da2->gdcreg[LG_BIT_MASK_LOW] = 0xff;
+            // da2->gdcreg[LG_BIT_MASK_HIGH] = 0xff;
+            // da2->gdcreg[LG_MAP_MASKJ] = 0xff;
             break;
     }
 }
@@ -1208,6 +1213,9 @@ da2_bitblt_addpayload(uint8_t val, void *priv)
             da2->bitblt.payload[da2->bitblt.payload_addr] = val;
             da2->bitblt.payload_addr++;
             switch (val) {
+                case 0x00:
+                    da2->bitblt.payload_opsize = 1;
+                    break;
                 case 0x88:
                 case 0x89:
                 case 0x95:
@@ -1470,7 +1478,7 @@ da2_out(uint16_t addr, uint16_t val, void *priv)
         case LG_DATA:
         // if(da2->gdcaddr != 8 && da2->gdcaddr != 9) da2_iolog("DA2 GCOut idx %X val %02X %04X:%04X esdi %04X:%04X\n", da2->gdcaddr, val, cs >> 4, cpu_state.pc, ES, DI);
             da2_iolog("DA2 Out addr %03X idx %02X val %02X\n", addr, da2->gdcaddr, val);
-            da2->gdcreg[da2->gdcaddr & 0x0f] = val & 0xff;
+            da2->gdcreg[da2->gdcaddr & 0x1f] = val;
             switch (da2->gdcaddr & 0x1f) {
                 case LG_READ_MAP_SELECT:
                     // (da2->gdcreg[LG_READ_MAP_SELECT] & 7) = val & 0x7;
@@ -1480,7 +1488,6 @@ da2_out(uint16_t addr, uint16_t val, void *priv)
                      /* Resettting masks here gliches chart drawing in IBM Multitool Chart K3.1 */
                     // da2->gdcreg[LG_BIT_MASK_LOW] = 0xff;
                     // da2->gdcreg[LG_BIT_MASK_HIGH] = 0xff;
-                    // da2->gdcreg[LG_MAP_MASKJ] = 0xff;
                     // da2->gdcreg[LG_MAP_MASKJ] = 0xff;
                     break;
                 case LG_MAP_MASKJ:
@@ -1626,6 +1633,11 @@ da2_in(uint16_t addr, void *priv)
             temp = da2->gdcreg[da2->gdcaddr & 0x1f];
             // da2_iolog("DA2 In %04X(%02X) %04X %04X:%04X\n", addr, da2->gdcaddr, temp, cs >> 4, cpu_state.pc);
             break;
+        case 0x3EC:
+            temp = (da2->gdcreg[da2->gdcaddr & 0x1f] & 0xff);
+            temp <<= 8;
+            temp |= (da2->gdcreg[da2->gdcaddr & 0x1f] >> 8);
+            break;
     }
     // da2_iolog("DA2 In %04X %04X %04X:%04X\n", addr, temp, cs >> 4, cpu_state.pc);
     return temp;
@@ -1695,9 +1707,8 @@ da2_outw(uint16_t addr, uint16_t val, void *priv)
             da2->outflipflop = 0;
             break;
         case 0x3EC:
-            // da2_iolog("DA2 Outw addr %03X val %04X %04X:%04X\n", addr, val, cs >> 4, cpu_state.pc);
-            da2_out(LG_DATA, val >> 8, da2);
-            /* reset masks for compatibility with Win 3.1 solitaire */
+            da2_out(LG_DATA, (val >> 8) | (val << 8), da2);
+            // /* reset masks for compatibility with Win 3.1 solitaire */
             if (da2->gdcaddr == LG_MODE) {
                 da2->gdcreg[LG_BIT_MASK_LOW]  = 0xff;
                 da2->gdcreg[LG_BIT_MASK_HIGH] = 0xff;
@@ -2750,8 +2761,8 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
         // if ((addr & 1)  && !(da2->gdcreg[LG_COMMAND] & 0x08)) bitmask = da2->gdcreg[LG_BIT_MASK_HIGH];
         /* Without byte align: Win 3.1 (Window) - bad, Solitaire 3.1 - ok, A-Train IV (splash): ok,  OS/2 J2.0(cmd) - ok */
         /* With byte align: Win 3.1 (Window) - ok, Solitaire 3.1 - ok, A-Train IV (splash): ok, OS/2 J2.0(cmd) - ok */
-        // if ((addr & 1)) bitmask = da2->gdcreg[LG_BIT_MASK_HIGH];
-        // else  
+        if ((addr & 1)) bitmask = da2->gdcreg[LG_BIT_MASK_HIGH];
+        else  
         /* No align: Win 3.1 (Window Title) - ok, Solitaire 3.1 - ok, A-Train IV (splash): bad,  OS/2 J2.0(cmd) - bad */
             bitmask = da2->gdcreg[LG_BIT_MASK_LOW];
         
@@ -2830,10 +2841,11 @@ da2_mmio_write(uint32_t addr, uint8_t val, void *priv)
             case 3:/* equiv to vga write mode 3 (write latched data with Set/Reset masked by CPU data AND Bit Mask) */
                 if (da2->gdcreg[LG_DATA_ROTATION] & 7)
                     val = svga_rotate[da2->gdcreg[LG_DATA_ROTATION] & 7][val];
-                bitmask &= val;
+                // bitmask &= val;
+                bitmask = val; /* In mode 3, Bitmask register is ignored in Windows 3.0 */
                 
                 for (uint8_t i = 0; i < 8; i++)
-                    if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i)) /* this doesn't work in OS/2 J2.0 */
+                    // if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i)) /* this doesn't work in OS/2 J2.0 */
                         da2->gdcinput[i] = (da2->gdcreg[LG_SET_RESETJ] & (1 << i)) ? 0xff : 0;
                 da2_gdcropB(addr, bitmask, da2);
                 break;
@@ -2850,9 +2862,8 @@ da2_rightrotate(uint16_t data, uint8_t count)
     return (data >> count) | (data << (sizeof(data) * 8 - count));
 }
 static void
-da2_mmio_gc_writeW(uint32_t addr, uint16_t val, void *priv)
+da2_mmio_gc_writeW(uint32_t addr, uint16_t val, da2_t *da2)
 {
-    da2_t   *da2     = (da2_t *) priv;
     uint16_t bitmask;
     addr &= DA2_MASK_MMIO;
     bitmask = da2->gdcreg[LG_BIT_MASK_HIGH];
@@ -2937,10 +2948,11 @@ da2_mmio_gc_writeW(uint32_t addr, uint16_t val, void *priv)
         case 3:/* equiv to vga write mode 3 (write latched data with Set/Reset masked by CPU data AND Bit Mask) */
             if (da2->gdcreg[LG_DATA_ROTATION] & 15)
                 val = da2_rightrotate(val, da2->gdcreg[LG_DATA_ROTATION] & 15);
-            bitmask &= val;
+            // bitmask &= val;
+            bitmask = val; /* In mode 3, Bitmask register is ignored in Windows 3.0 */
 
             for (uint8_t i = 0; i < 8; i++)
-                if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i)) /* this doesn't work in OS/2 J2.0 */
+                // if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i)) /* this doesn't work in OS/2 J2.0 */
                     da2->gdcinput[i] = (da2->gdcreg[LG_SET_RESETJ] & (1 << i)) ? 0xffff : 0;
             da2_gdcropW(addr, bitmask, da2);
             break;

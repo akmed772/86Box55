@@ -8,11 +8,7 @@
  *
  *          IBM PS/55 Display Adapter II (and its successors) emulation.
  * 
- *   Notes: There are some known issues that should be corrected.
- *            - Incorrect foreground text color appears on an active window in OS/2 J1.3. 
- *            - Glitches some part of graphics on the Control Panel in OS/2 J2.1 beta. 
- * 
- *          The code should be tested with following cases.
+ *   Notes: The code should be tested with following cases.
  *            - Execute MODE 0, 1, 3 and 4 commands in DOS K3.3 to test various video modes.
  *            - Run SAMPLE program with the BASIC interpreter in DOS K3.3.
  *            - Run DOS J4.0 install program to test video mode 03.
@@ -265,14 +261,14 @@
 #define LG_SET_RESET_2          0x10
 
 #ifndef RELEASE_BUILD
-#define ENABLE_DA2_LOG 1
+// #define ENABLE_DA2_LOG 1
 #endif
 
 #ifdef ENABLE_DA2_LOG
-#    define ENABLE_DA2_DEBUGIO 1
+// #    define ENABLE_DA2_DEBUGIO 1
 #    define ENABLE_DA2_DEBUGBLT 1
-#    define ENABLE_DA2_DEBUGVRAM 1
-#    define ENABLE_DA2_DEBUGFULLSCREEN 1
+// #    define ENABLE_DA2_DEBUGVRAM 1
+// #    define ENABLE_DA2_DEBUGFULLSCREEN 1
 // #    define ENABLE_DA2_DEBUGMONWAIT 1
 int da2_do_log = ENABLE_DA2_LOG;
 
@@ -660,12 +656,12 @@ getRAMFont(int32_t code, int line, int x, void *priv)
         code = (code * 72) + (line * 3) + x;
         font = da2->mmio.font[code];             /* 0000 0000 0000 0000 0000 0000 1111 1111 */
         font <<= 8;                              /* 0000 0000 0000 0000 1111 1111 0000 0000 */
-        font |= da2->mmio.font[code + 1] & 0xf0; /* 0000 0000 0000 0000 1111 1111 2222 0000 */
-        font <<= 3;                              /* 0000 0000 0000 0111 1111 1222 2000 0000 */
-        font |= da2->mmio.font[code + 1] & 0x0f; /* 0000 0000 0000 0111 1111 1222 2000 2222 */
-        font <<= 8;                              /* 0000 0111 1111 1222 2000 2222 0000 0000 */
-        font |= da2->mmio.font[code + 2];        /* 0000 0111 1111 1222 2000 2222 3333 3333 */
-        font <<= 4;                              /* 0111 1111 1222 2000 2222 3333 3333 0000 */
+        font |= da2->mmio.font[code + 1] & 0xfe; /* 0000 0000 0000 0000 1111 1111 2222 rrr0 */
+        font <<= 3;                              /* 0000 0000 0000 0111 1111 1222 2rrr 0000 */
+        font |= da2->mmio.font[code + 1] & 0x0f; /* 0000 0000 0000 0111 1111 1222 2rrr 2222 */
+        font <<= 8;                              /* 0000 0111 1111 1222 2rrr 2222 0000 0000 */
+        font |= da2->mmio.font[code + 2];        /* 0000 0111 1111 1222 2rrr 2222 3333 3333 */
+        font <<= 4;                              /* 0111 1111 1222 2rrr 2222 3333 3333 0000 */
     } else if ((code >= 0xb000) && (code <= 0xb75f)) { /* DBCS 26x29  */
         /* convert code->address in gaiji memory */
         code -= 0xb000;
@@ -718,25 +714,30 @@ da2_PutcharWithBitmask(uint32_t codeIBMJ, int width, uint16_t attr, int line, ui
         }
         da2_WritePlaneDataWithBitmask(destaddr + 2, maskr, &srcpx, da2);
     } else {
-        font = (font & 0xfff80000) | ((font & 0x0000ffff) << 3);
+        font    = (font & 0xfff80000) | ((font & 0x0000ffff) << 3);
         fontinv = ~font;
+        da2_bltlog("cf %08x %d\n", font, da2->bitblt.bitshift_destr);
         for (uint8_t i = 0; i < 8; i++) {
             srcpx.p8[i] = (fg & (1 << i)) ? font >> 16 : 0;
             srcpx.p8[i] |= (bg & (1 << i)) ? fontinv >> 16 : 0;
         }
+        da2_bltlog("c0 %x %08x %x\n", destaddr, font >> da2->bitblt.bitshift_destr, maskl);
         da2_WritePlaneDataWithBitmask(destaddr, maskl, &srcpx, da2);
         for (uint8_t i = 0; i < 8; i++) {
             srcpx.p8[i] = (fg & (1 << i)) ? font : 0;
             srcpx.p8[i] |= (bg & (1 << i)) ? fontinv : 0;
         }
         if (da2->bitblt.destoption & 0x20) {
-            da2_WritePlaneDataWithBitmask(destaddr + 2,  maskr, &srcpx, da2);
+            da2_bltlog("c1 %x %08x %x\n", destaddr + 2, font << (16 - da2->bitblt.bitshift_destr), maskr);
+            da2_WritePlaneDataWithBitmask(destaddr + 2, maskr, &srcpx, da2);
         } else {
+            da2_bltlog("c2 %x %08x %x\n", destaddr + 2, font << (16 - da2->bitblt.bitshift_destr), 0xffff);
             da2_WritePlaneDataWithBitmask(destaddr + 2, 0xffff, &srcpx, da2);
             for (uint8_t i = 0; i < 8; i++) {
                 srcpx.p8[i] = (fg & (1 << i)) ? font << 16 : 0;
                 srcpx.p8[i] |= (bg & (1 << i)) ? fontinv << 16 : 0;
             }
+            da2_bltlog("c3 %x %08x %x\n", destaddr + 4, font << (32 - da2->bitblt.bitshift_destr), maskr);
             da2_WritePlaneDataWithBitmask(destaddr + 4, maskr, &srcpx, da2);
         }
     }
@@ -923,20 +924,26 @@ da2_bitblt_load(da2_t *da2)
     da2->bitblt.srcpitch       = da2->bitblt.reg[0x22];
     da2->bitblt.cmd1       = da2->bitblt.reg[0x30];
     if (da2->bitblt.cmd1 > 0xffff) {
-        da2->bitblt.cmd2 = da2->bitblt.cmd1 & 0xffff;
-        da2->bitblt.cmd1 >>= 16;
+        da2->bitblt.cmd2 = da2->bitblt.cmd1 >> 16;
+        da2->bitblt.cmd1 &= 0xffff;
     } else
         da2->bitblt.cmd2 = 0;
     /*
         DOS/V Extension 1040x725 some DBCS uses 0xB0 others 0x90
     */
-    da2->bitblt.destoption = da2->bitblt.reg[0x2F];
+    da2->bitblt.destoption = da2->bitblt.reg[0x2f];
         da2->bitblt.srcpitch -= 2;
     if (da2->bitblt.destoption & 0x80) {
         da2->bitblt.destaddr += 2;
         da2->bitblt.destpitch += 2;
         da2->bitblt.srcpitch += 4;
     }
+    // if (da2->bitblt.destoption & 0x20) {
+    //     da2->bitblt.size_x -= 1;
+    //     da2->bitblt.destpitch += 2;
+    //     da2->bitblt.srcpitch += 2;
+    //     // da2->bitblt.destaddr += 2;
+    // }
     if (da2->bitblt.destoption & 0x10) { /* destaddr -= 2, length += 1; */
         da2->bitblt.destaddr -= 2;
         da2->bitblt.size_x += 1;
@@ -956,6 +963,8 @@ da2_bitblt_load(da2_t *da2)
     /* Put DBCS char used by OS/2 and DOS/V Extension */
     if (da2->bitblt.cmd1 == 0x0202) {
         da2->bitblt.exec    = DA2_BLT_CPUTCHAR;
+        // if (da2->bitblt.destoption != 0xb0) // debug
+        //     da2->bitblt.exec   = DA2_BLT_CDONE;
         da2->bitblt.fcolor  = da2->bitblt.reg[0x1];
         da2->bitblt.srcaddr = da2->bitblt.reg[0x12];
 #ifdef ENABLE_DA2_DEBUGBLT
@@ -1597,23 +1606,10 @@ da2_out(uint16_t addr, uint16_t val, void *priv)
         case LG_DATA:
             // if(da2->gdcaddr != 8 && da2->gdcaddr != 9) da2_iolog("DA2 GCOut idx %X val %02X %04X:%04X esdi %04X:%04X\n", da2->gdcaddr, val, cs >> 4, cpu_state.pc, ES, DI);
             da2_iolog("DA2 Out addr %03X idx %02X val %02X\n", addr, da2->gdcaddr, val);
-            da2->gdcreg[da2->gdcaddr & 0x1f] = val;
-            switch (da2->gdcaddr & 0x1f) {
-                case LG_READ_MAP_SELECT:
-                    // (da2->gdcreg[LG_READ_MAP_SELECT] & 7) = val & 0x7;
-                    break;
-                case LG_MODE:
-                    // da2->writemode = val & 3;
-                     /* Resettting masks here gliches chart drawing in IBM Multitool Chart K3.1 */
-                    // da2->gdcreg[LG_BIT_MASK_LOW] = 0xff;
-                    // da2->gdcreg[LG_BIT_MASK_HIGH] = 0xff;
-                    // da2->gdcreg[LG_MAP_MASKJ] = 0xff;
-                    break;
-                case LG_MAP_MASKJ:
-                    da2->gdcreg[LG_MAP_MASKJ] = val & 0xff;
-                    break;
-                case LG_COMMAND:
-                    break;
+            if (da2->gdcaddr > 0x1f)
+                return;
+            da2->gdcreg[da2->gdcaddr] = val;
+            switch (da2->gdcaddr) {
                 case LG_SET_RESET_2:
                     da2_iolog("!!!DA2 GC Out addr %03X idx 10 val %02X\n", addr, val);
                     return;
@@ -2645,7 +2641,7 @@ da2_gdcropB(uint32_t addr,uint8_t bitmask, uint16_t lgcommand, da2_t *da2)
 {
     for (uint8_t i = 0; i < 8; i++) {
         if (da2->gdcreg[LG_MAP_MASKJ] & (1 << i)) {
-            da2_log("da2_gdcropB o%x d%x s%x p%d m%x", da2->gdcreg[LG_COMMAND] & 0x03, da2->gdcinput[i], da2->gdcsrc[i], i, bitmask);
+            // da2_log("da2_gdcropB o%x d%x s%x p%d m%x", da2->gdcreg[LG_COMMAND] & 0x03, da2->gdcinput[i], da2->gdcsrc[i], i, bitmask);
             switch (lgcommand & 0x03) {
                 case 0: /*Set*/
                     // da2->vram[addr | i] = (da2->gdcinput[i] & bitmask) | (da2->gdcsrc[i] & ~bitmask);
@@ -2665,7 +2661,7 @@ da2_gdcropB(uint32_t addr,uint8_t bitmask, uint16_t lgcommand, da2_t *da2)
                     da2_vram_w(addr | i,  ((da2->gdcinput[i] ^ da2->gdcsrc[i]) & bitmask) | (da2->vram[addr | i] & ~bitmask), da2);
                     break;
             }
-            da2_log(" -> %02x\n", da2->vram[addr | i]);
+            // da2_log(" -> %02x\n", da2->vram[addr | i]);
         }
     }
 }

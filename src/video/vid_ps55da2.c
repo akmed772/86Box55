@@ -550,7 +550,7 @@ da2_WritePlaneDataWithBitmask(uint32_t destaddr, uint16_t mask, pixel32 *srcpx, 
         // if (da2->gdcreg[LG_DATA_ROTATION] & 15)
         //     val = da2_rightrotate(val, da2->gdcreg[LG_DATA_ROTATION] & 15);
         // mask = 0xffff;
-        mask = da2->bitblt.ropdata;
+        mask &= srcpx->p8[0]; /* TODO: There must be param which plane is used for the mask. */
         // pclog("%x %x %x %x %x\n", da2->bitblt.fcolor, srcpx->p8[0],srcpx->p8[1],srcpx->p8[2],srcpx->p8[3]);
         for (uint8_t i = 0; i < 8; i++) {
             // if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i)) /* this doesn't work in OS/2 J2.0 */
@@ -1829,11 +1829,11 @@ da2_outw(uint16_t addr, uint16_t val, void *priv)
         case 0x3EC:
             da2_out(LG_DATA, (val >> 8) | (val << 8), da2);
             // /* reset masks for compatibility with Win 3.1 solitaire */
-            if (da2->gdcaddr == LG_MODE) {
-                da2->gdcreg[LG_BIT_MASK_LOW]  = 0xff;
-                da2->gdcreg[LG_BIT_MASK_HIGH] = 0xff;
-                da2->gdcreg[LG_MAP_MASKJ]     = 0xff;
-            }
+            // if (da2->gdcaddr == LG_MODE) {
+            //     da2->gdcreg[LG_BIT_MASK_LOW]  = 0xff;
+            //     da2->gdcreg[LG_BIT_MASK_HIGH] = 0xff;
+            //     da2->gdcreg[LG_MAP_MASKJ]     = 0xff;
+            // }
             break;
         case 0x3ED:
             da2->gdcaddr = LG_MODE;

@@ -89,12 +89,13 @@
 #define DA2_BLT_CIDLE             0
 #define DA2_BLT_CFILLRECT         1
 #define DA2_BLT_CFILLTILE         2
-#define DA2_BLT_CCOPYF            3
-#define DA2_BLT_CCOPYR            4
-#define DA2_BLT_CPUTCHAR          5
-#define DA2_BLT_CLINE             6
-#define DA2_BLT_CDONE             7
-#define DA2_BLT_CLOAD             8
+#define DA2_BLT_CREWRITE          3
+#define DA2_BLT_CCOPYF            4
+#define DA2_BLT_CCOPYR            5
+#define DA2_BLT_CPUTCHAR          6
+#define DA2_BLT_CLINE             7
+#define DA2_BLT_CDONE             8
+#define DA2_BLT_CLOAD             9
 /* POS ID = 0xeffe : Display Adapter II, III, V  */
 #define DA2_POSID_H 0xef
 #define DA2_POSID_L 0xfe
@@ -272,7 +273,7 @@
 #    define ENABLE_DA2_DEBUGBLT 1
 #    define ENABLE_DA2_DEBUGVRAM 1
 #    define ENABLE_DA2_DEBUGFULLSCREEN 1
-#    define ENABLE_DA2_DEBUGMONWAIT 1
+// #    define ENABLE_DA2_DEBUGMONWAIT 1
 int da2_do_log = ENABLE_DA2_LOG;
 
 static void
@@ -399,7 +400,7 @@ typedef struct da2_t {
         int        bitshift_destr;
         int        raster_op;
         int        writemode;
-        uint32_t   cmd1;
+        uint32_t   cmd1, cmd2, ropdata;
         uint8_t    payload[DA2_BLT_MEMSIZE];
         int        payload_addr;
         int        payload_opsize;
@@ -549,7 +550,7 @@ da2_WritePlaneDataWithBitmask(uint32_t destaddr, uint16_t mask, pixel32 *srcpx, 
         // if (da2->gdcreg[LG_DATA_ROTATION] & 15)
         //     val = da2_rightrotate(val, da2->gdcreg[LG_DATA_ROTATION] & 15);
         // mask = 0xffff;
-        mask &= srcpx->p8[0];
+        mask = da2->bitblt.ropdata;
         // pclog("%x %x %x %x %x\n", da2->bitblt.fcolor, srcpx->p8[0],srcpx->p8[1],srcpx->p8[2],srcpx->p8[3]);
         for (uint8_t i = 0; i < 8; i++) {
             // if (da2->gdcreg[LG_ENABLE_SRJ] & (1 << i)) /* this doesn't work in OS/2 J2.0 */
@@ -614,6 +615,15 @@ da2_DrawColorWithBitmask(uint32_t destaddr, uint8_t color, uint16_t mask, da2_t 
     /* fill data with input color */
     for (uint8_t i = 0; i < 8; i++)
         srcpx.p8[i] = (color & (1 << i)) ? 0xffffffff : 0; /* read in word */
+
+    da2_WritePlaneDataWithBitmask(destaddr, mask, &srcpx, da2);
+}
+static void
+da2_WriteROPWithBitmask(uint32_t destaddr, uint32_t data, uint16_t mask, da2_t *da2)
+{
+    pixel32 srcpx;
+    for (uint8_t i = 0; i < 8; i++)
+        srcpx.p8[i] = (data << 16);
 
     da2_WritePlaneDataWithBitmask(destaddr, mask, &srcpx, da2);
 }
@@ -905,14 +915,18 @@ da2_bitblt_load(da2_t *da2)
     da2->bitblt.bitshift_destr = ((da2->bitblt.reg[0x03] >> 4) & 0x0f); /* set bit shift */
     da2->bitblt.writemode      = da2->bitblt.reg[0x05] & 0x03;
     da2->bitblt.raster_op      = da2->bitblt.reg[0x0b];
+    da2->bitblt.ropdata        = da2->bitblt.reg[0x0c];
     da2->bitblt.destaddr       = da2->bitblt.reg[0x29];
     da2->bitblt.size_x         = da2->bitblt.reg[0x33];
     da2->bitblt.size_y         = da2->bitblt.reg[0x35];
     da2->bitblt.destpitch      = da2->bitblt.reg[0x21];
     da2->bitblt.srcpitch       = da2->bitblt.reg[0x22];
     da2->bitblt.cmd1       = da2->bitblt.reg[0x30];
-    if (da2->bitblt.cmd1 > 0xffff)
+    if (da2->bitblt.cmd1 > 0xffff) {
+        da2->bitblt.cmd2 = da2->bitblt.cmd1 & 0xffff;
         da2->bitblt.cmd1 >>= 16;
+    } else
+        da2->bitblt.cmd2 = 0;
     /*
         DOS/V Extension 1040x725 some DBCS uses 0xB0 others 0x90
     */
@@ -941,7 +955,6 @@ da2_bitblt_load(da2_t *da2)
     // }
     /* Put DBCS char used by OS/2 and DOS/V Extension */
     if (da2->bitblt.cmd1 == 0x0202) {
-        // da2->bitblt.reg[0x10] = 0; /* reset */
         da2->bitblt.exec    = DA2_BLT_CPUTCHAR;
         da2->bitblt.fcolor  = da2->bitblt.reg[0x1];
         da2->bitblt.srcaddr = da2->bitblt.reg[0x12];
@@ -1025,6 +1038,15 @@ da2_bitblt_load(da2_t *da2)
         da2_log("copy tile src=%x, dest=%x, x1=%d, y1=%d, x2=%d, y2=%d, w=%d, h=%d\n",
                 da2->bitblt.srcaddr, da2->bitblt.destaddr,
                 (da2->bitblt.reg[0x2B] % (da2->rowoffset * 2)) * 8, da2->bitblt.reg[0x2B] / (da2->rowoffset * 2),
+                (da2->bitblt.reg[0x29] % (da2->rowoffset * 2)) * 8, da2->bitblt.reg[0x29] / (da2->rowoffset * 2),
+                da2->bitblt.size_x, da2->bitblt.size_y);
+
+    /* Block overwrite at the same position */
+    } else if (da2->bitblt.cmd2 == 0x1802) {
+        da2->bitblt.exec    = DA2_BLT_CREWRITE;
+        da2_log("Overwrite block src=%x, dest=%x, x1=%d, y1=%d, x2=%d, y2=%d, w=%d, h=%d\n",
+                da2->bitblt.destaddr, da2->bitblt.destaddr,
+                (da2->bitblt.reg[0x29] % (da2->rowoffset * 2)) * 8, da2->bitblt.reg[0x29] / (da2->rowoffset * 2),
                 (da2->bitblt.reg[0x29] % (da2->rowoffset * 2)) * 8, da2->bitblt.reg[0x29] / (da2->rowoffset * 2),
                 da2->bitblt.size_x, da2->bitblt.size_y);
 
@@ -1170,6 +1192,24 @@ da2_bitblt_exec(void *priv)
                 da2->bitblt.destaddr += 2;
                 break;
             }
+        case DA2_BLT_CREWRITE:
+            if (da2->bitblt.x >= da2->bitblt.size_x - 1) {
+                da2_WriteROPWithBitmask(da2->bitblt.destaddr, da2->bitblt.ropdata, da2->bitblt.maskr, da2);
+                if (da2->bitblt.y >= da2->bitblt.size_y - 1) {
+                    da2->bitblt.exec = DA2_BLT_CDONE;
+                }
+                da2->bitblt.x = 0;
+                da2->bitblt.y++;
+                da2->bitblt.destaddr += da2->bitblt.destpitch;
+            } else if (da2->bitblt.x == 0) {
+                da2_WriteROPWithBitmask(da2->bitblt.destaddr, da2->bitblt.ropdata, da2->bitblt.maskl, da2);
+                da2->bitblt.x++;
+            } else {
+                da2_WriteROPWithBitmask(da2->bitblt.destaddr, da2->bitblt.ropdata, 0xffff, da2);
+                da2->bitblt.x++;
+            }
+            da2->bitblt.destaddr += 2;
+            break;
         case DA2_BLT_CCOPYF:
             if (da2->bitblt.x >= da2->bitblt.size_x - 1) {
                 da2_CopyPlaneDataWithBitmask(da2->bitblt.srcaddr, da2->bitblt.destaddr, da2->bitblt.maskr, da2);
